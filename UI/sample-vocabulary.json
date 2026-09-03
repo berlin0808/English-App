@@ -1,0 +1,101 @@
+{
+  "words": [
+    {
+      "id": "1",
+      "word": "sophisticated",
+      "meaning": "advanced, refined, and showing good judgment or knowledge",
+      "example": "She has sophisticated taste in art and music.",
+      "source": "The Economist",
+      "mastery": 2,
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "attempts": 5,
+      "correct": 4
+    },
+    {
+      "id": "2",
+      "word": "meticulous",
+      "meaning": "showing great attention to detail; very careful and precise",
+      "example": "The researcher was meticulous in conducting the experiment.",
+      "source": "Scientific article",
+      "mastery": 1,
+      "createdAt": "2024-01-16T10:00:00.000Z",
+      "attempts": 3,
+      "correct": 2
+    },
+    {
+      "id": "3",
+      "word": "ambiguous",
+      "meaning": "open to more than one interpretation; unclear or uncertain in meaning",
+      "example": "The contract had ambiguous terms that led to a dispute.",
+      "source": "Legal document",
+      "mastery": 0,
+      "createdAt": "2024-01-17T10:00:00.000Z",
+      "attempts": 0,
+      "correct": 0
+    },
+    {
+      "id": "4",
+      "word": "pragmatic",
+      "meaning": "dealing with things in a realistic, practical way based on actual circumstances",
+      "example": "We took a pragmatic approach to solving the problem.",
+      "source": "Business book",
+      "mastery": 2,
+      "createdAt": "2024-01-18T10:00:00.000Z",
+      "attempts": 4,
+      "correct": 3
+    },
+    {
+      "id": "5",
+      "word": "eloquent",
+      "meaning": "fluent, persuasive, and expressive in speech or writing",
+      "example": "The speaker gave an eloquent speech that moved the audience.",
+      "source": "Novel",
+      "mastery": 1,
+      "createdAt": "2024-01-19T10:00:00.000Z",
+      "attempts": 2,
+      "correct": 1
+    },
+    {
+      "id": "6",
+      "word": "diligent",
+      "meaning": "having or showing care in one's work or duties",
+      "example": "Her diligent efforts finally paid off when she passed the exam.",
+      "source": "Educational blog",
+      "mastery": 3,
+      "createdAt": "2024-01-20T10:00:00.000Z",
+      "attempts": 6,
+      "correct": 5
+    },
+    {
+      "id": "7",
+      "word": "ephemeral",
+      "meaning": "lasting for a very short time; transitory",
+      "example": "The beauty of cherry blossoms is ephemeral, lasting only a few weeks.",
+      "source": "Travel magazine",
+      "mastery": 0,
+      "createdAt": "2024-01-21T10:00:00.000Z",
+      "attempts": 1,
+      "correct": 0
+    },
+    {
+      "id": "8",
+      "word": "resilient",
+      "meaning": "able to recover quickly from difficulties; tough and adaptable",
+      "example": "The community proved to be resilient after the natural disaster.",
+      "source": "News article",
+      "mastery": 2,
+      "createdAt": "2024-01-22T10:00:00.000Z",
+      "attempts": 4,
+      "correct": 3
+    }
+  ],
+  "stats": {
+    "totalSessions": 12,
+    "totalCorrect": 85,
+    "totalAnswered": 120,
+    "currentStreak": 5,
+    "longestStreak": 12,
+    "lastStudyDate": "2024-01-22T10:00:00.000Z"
+  },
+  "exportDate": "2024-01-22T10:00:00.000Z"
+}

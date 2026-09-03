@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Vocab Trainer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <h1>📚 Quick Vocab Trainer</h1>
+            <div class="stats">
+                <span id="wordCount">0 words</span>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="add">📝 Quick Add</button>
+            <button class="tab-btn" data-tab="list">📋 Word List</button>
+            <button class="tab-btn" data-tab="quiz">🧠 Quiz</button>
+            <button class="tab-btn" data-tab="write">✍️ Write</button>
+            <button class="tab-btn" data-tab="progress">📊 Progress</button>
+            <button class="tab-btn" data-tab="settings">⚙️ Settings</button>
+        </nav>
+
+        <!-- Tab Content -->
+        <main class="main-content">
+            <!-- Quick Add Tab -->
+            <div id="add-tab" class="tab-content active">
+                <div class="card">
+                    <h2>Add New Vocabulary</h2>
+                    <form id="addWordForm" class="form">
+                        <div class="form-group">
+                            <label for="word">Word or Phrase</label>
+                            <input type="text" id="word" required placeholder="e.g., sophisticated" autocomplete="off">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="meaning">Meaning</label>
+                            <textarea id="meaning" required placeholder="e.g., advanced and refined" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="example">Example Sentence (optional)</label>
+                            <textarea id="example" placeholder="e.g., She has sophisticated taste in art" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="source">Source (optional)</label>
+                            <input type="text" id="source" placeholder="e.g., The Economist article">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="category">Category (optional)</label>
+                            <select id="category" class="category-select">
+                                <option value="">-- No Category --</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">💾 Save Word</button>
+                            <button type="button" id="saveAndAdd" class="btn btn-secondary">📚 Save & Add Another</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Word List Tab -->
+            <div id="list-tab" class="tab-content">
+                <div class="card">
+                    <div class="list-header">
+                        <h2>Your Vocabulary</h2>
+                        <div class="search-bar">
+                            <input type="text" id="searchInput" placeholder="🔍 Search words...">
+                        </div>
+                    </div>
+                    
+                    <div id="wordList" class="word-list">
+                        <div class="empty-state">
+                            <p>No words added yet. Start by adding your first vocabulary word!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Tab -->
+            <div id="quiz-tab" class="tab-content">
+                <div class="card">
+                    <div id="quizSetup" class="quiz-setup">
+                        <h2>Practice Quiz</h2>
+                        <p>Test your vocabulary knowledge with a quick quiz!</p>
+                        <div class="quiz-options">
+                            <label>
+                                <input type="radio" name="quizType" value="meaning" checked>
+                                Word → Meaning
+                            </label>
+                            <label>
+                                <input type="radio" name="quizType" value="word">
+                                Meaning → Word
+                            </label>
+                        </div>
+                        <div class="form-group" style="margin: 1rem 0;">
+                            <label for="quizCategory">Category (optional)</label>
+                            <select id="quizCategory" class="category-select">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <button id="startQuiz" class="btn btn-primary">🚀 Start Quiz (10 questions)</button>
+                    </div>
+
+                    <div id="quizGame" class="quiz-game hidden">
+                        <div class="quiz-progress">
+                            <span id="questionNumber">Question 1 of 10</span>
+                            <div class="progress-bar">
+                                <div id="progressFill" class="progress-fill"></div>
+                            </div>
+                        </div>
+
+                        <div class="question-card">
+                            <h3 id="questionText">What does "sophisticated" mean?</h3>
+                            <div id="answerOptions" class="answer-options">
+                                <!-- Options will be generated by JS -->
+                            </div>
+                            <button id="submitAnswer" class="btn btn-primary" disabled>Submit Answer</button>
+                        </div>
+
+                        <div id="feedback" class="feedback hidden">
+                            <div class="feedback-content">
+                                <p id="feedbackText"></p>
+                                <button id="nextQuestion" class="btn btn-secondary">Next Question</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="quizResults" class="quiz-results hidden">
+                        <h2>Quiz Complete!</h2>
+                        <div class="results-summary">
+                            <div class="score-circle">
+                                <span id="finalScore">8/10</span>
+                            </div>
+                            <p id="scoreMessage">Great job! You're making excellent progress.</p>
+                        </div>
+                        <button id="retakeQuiz" class="btn btn-primary">Take Another Quiz</button>
+                        <button id="reviewMissed" class="btn btn-secondary">Review Missed Words</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Write Tab -->
+            <div id="write-tab" class="tab-content">
+                <div class="card">
+                    <div id="writeSetup" class="write-setup">
+                        <h2>Sentence Writing Practice</h2>
+                        <p>Practice using your vocabulary in sentences!</p>
+                        <div class="form-group" style="margin: 1rem 0;">
+                            <label for="writeCategory">Category (optional)</label>
+                            <select id="writeCategory" class="category-select">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <button id="startWriting" class="btn btn-primary">✍️ Start Writing Practice</button>
+                    </div>
+
+                    <div id="writePractice" class="write-practice hidden">
+                        <div class="target-word">
+                            <h3>Write a sentence using: <span id="targetWord">sophisticated</span></h3>
+                            <div class="word-info">
+                                <p><strong>Meaning:</strong> <span id="targetMeaning">advanced and refined</span></p>
+                            </div>
+                        </div>
+
+                        <div class="writing-area">
+                            <label for="userSentence">Your sentence:</label>
+                            <textarea id="userSentence" placeholder="Type your sentence here..." rows="3"></textarea>
+                            <button id="checkSentence" class="btn btn-primary">✨ Check Sentence</button>
+                        </div>
+
+                        <div id="sentenceFeedback" class="sentence-feedback hidden">
+                            <div class="feedback-content">
+                                <h4>Feedback:</h4>
+                                <div id="feedbackContent">
+                                    <!-- AI feedback will go here -->
+                                </div>
+                                <button id="nextWord" class="btn btn-secondary">Next Word</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Tab -->
+            <div id="progress-tab" class="tab-content">
+                <div class="card">
+                    <h2>📊 Your Learning Progress</h2>
+                    
+                    <div class="progress-overview">
+                        <div class="stat-box">
+                            <div class="stat-number" id="totalWords">0</div>
+                            <div class="stat-label">Total Words</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number" id="masteredWords">0</div>
+                            <div class="stat-label">Mastered</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number" id="learningWords">0</div>
+                            <div class="stat-label">Learning</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number" id="quizAccuracy">0%</div>
+                            <div class="stat-label">Quiz Accuracy</div>
+                        </div>
+                    </div>
+
+                    <div class="progress-section">
+                        <h3>Learning Streaks</h3>
+                        <div class="streak-info">
+                            <div class="streak-item">
+                                <span>🔥 Current Streak</span>
+                                <span id="currentStreak">0 days</span>
+                            </div>
+                            <div class="streak-item">
+                                <span>⭐ Longest Streak</span>
+                                <span id="longestStreak">0 days</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="progress-section">
+                        <h3>Activity This Week</h3>
+                        <div class="activity-chart" id="activityChart">
+                            <div class="activity-bar">
+                                <div class="bar-label">Mon</div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="height: 0%"></div>
+                                </div>
+                                <span class="bar-value">0</span>
+                            </div>
+                            <div class="activity-bar">
+                                <div class="bar-label">Tue</div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="height: 0%"></div>
+                                </div>
+                                <span class="bar-value">0</span>
+                            </div>
+                            <div class="activity-bar">
+                                <div class="bar-label">Wed</div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="height: 0%"></div>
+                                </div>
+                                <span class="bar-value">0</span>
+                            </div>
+                            <div class="activity-bar">
+                                <div class="bar-label">Thu</div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="height: 0%"></div>
+                                </div>
+                                <span class="bar-value">0</span>
+                            </div>
+                            <div class="activity-bar">
+                                <div class="bar-label">Fri</div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="height: 0%"></div>
+                                </div>
+                                <span class="bar-value">0</span>
+                            </div>
+                            <div class="activity-bar">
+                                <div class="bar-label">Sat</div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="height: 0%"></div>
+                                </div>
+                                <span class="bar-value">0</span>
+                            </div>
+                            <div class="activity-bar">
+                                <div class="bar-label">Sun</div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="height: 0%"></div>
+                                </div>
+                                <span class="bar-value">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="progress-section">
+                        <h3>Mastery Distribution</h3>
+                        <div class="mastery-bars">
+                            <div class="mastery-item">
+                                <div class="mastery-label">
+                                    <span>🔴 Unknown</span>
+                                    <span id="masteryUnknown">0%</span>
+                                </div>
+                                <div class="mastery-bar">
+                                    <div class="mastery-fill unknown" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="mastery-item">
+                                <div class="mastery-label">
+                                    <span>🟡 Recognized</span>
+                                    <span id="masteryRecognized">0%</span>
+                                </div>
+                                <div class="mastery-bar">
+                                    <div class="mastery-fill recognized" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="mastery-item">
+                                <div class="mastery-label">
+                                    <span>🟢 Understood</span>
+                                    <span id="masteryUnderstood">0%</span>
+                                </div>
+                                <div class="mastery-bar">
+                                    <div class="mastery-fill understood" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="mastery-item">
+                                <div class="mastery-label">
+                                    <span>💚 Mastered</span>
+                                    <span id="masteryMastered">0%</span>
+                                </div>
+                                <div class="mastery-bar">
+                                    <div class="mastery-fill mastered" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settings-tab" class="tab-content">
+                <div class="card">
+                    <h2>⚙️ Settings</h2>
+                    
+                    <div class="settings-section">
+                        <h3>Study Preferences</h3>
+                        <div class="setting-item">
+                            <label for="quizSize">Quiz Size (words per session)</label>
+                            <select id="quizSize">
+                                <option value="5">5 words</option>
+                                <option value="10" selected>10 words</option>
+                                <option value="20">20 words</option>
+                                <option value="50">50 words</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="aiEnabled">
+                                <input type="checkbox" id="aiEnabled" checked>
+                                Enable AI Feedback (for sentence practice)
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="apiKey">OpenAI API Key (optional)</label>
+                            <input type="password" id="apiKey" placeholder="sk-...">
+                            <small>Your key is stored locally only</small>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Categories</h3>
+                        <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 1rem;">Manage vocabulary categories for organizing your words.</p>
+                        <div class="setting-item">
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                                <input type="text" id="newCategoryInput" placeholder="New category name..." style="flex: 1; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px;">
+                                <button type="button" id="addCategoryBtn" class="btn btn-primary" style="padding: 0.5rem 1rem;">+ Add</button>
+                            </div>
+                            <div id="categoryList" class="category-list">
+                                <!-- Categories will be rendered by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Appearance</h3>
+                        <div class="setting-item">
+                            <label for="theme">Theme</label>
+                            <select id="theme">
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                                <option value="auto" selected>Auto (System)</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="fontSize">Font Size</label>
+                            <select id="fontSize">
+                                <option value="small">Small</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Data Management</h3>
+                        <div class="button-group">
+                            <button id="exportData" class="btn btn-secondary">📥 Export Data (JSON)</button>
+                            <button id="importData" class="btn btn-secondary">📤 Import Data</button>
+                            <input type="file" id="importFile" accept=".json" style="display: none;">
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Danger Zone</h3>
+                        <div class="button-group">
+                            <button id="resetProgress" class="btn btn-danger">🔄 Reset All Progress</button>
+                            <button id="clearData" class="btn btn-danger">🗑️ Delete All Data</button>
+                        </div>
+                        <small style="color: #ef4444;">These actions cannot be undone. Make sure to export your data first!</small>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>About</h3>
+                        <p><strong>Quick Vocab Trainer</strong> v1.0.0</p>
+                        <p>A simple, offline-first vocabulary learning app.</p>
+                        <p>No data is shared or stored online. Everything stays on your device.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js?v=4"></script>
+</body>
+</html>
