@@ -7,12 +7,40 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="app">
+    <!-- Auth screen (shown when logged out) -->
+    <div id="authScreen" class="auth-screen">
+        <div class="auth-card">
+            <h1>📚 Quick Vocab Trainer</h1>
+            <p class="auth-subtitle" id="authSubtitle">Log in to access your vocabulary</p>
+
+            <form id="authForm" class="auth-form">
+                <div class="form-group">
+                    <label for="authEmail">Email</label>
+                    <input type="email" id="authEmail" required placeholder="you@example.com" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="authPassword">Password</label>
+                    <input type="password" id="authPassword" required placeholder="••••••••" autocomplete="current-password" minlength="6">
+                </div>
+                <div id="authError" class="auth-error" style="display:none;"></div>
+                <button type="submit" id="authSubmitBtn" class="btn btn-primary" style="width:100%;">Log In</button>
+            </form>
+
+            <p class="auth-toggle">
+                <span id="authToggleText">Don't have an account?</span>
+                <a href="#" id="authToggleLink">Sign up</a>
+            </p>
+        </div>
+    </div>
+
+    <div class="app" id="appContainer" style="display:none;">
         <!-- Header -->
         <header class="header">
             <h1>📚 Quick Vocab Trainer</h1>
             <div class="stats">
                 <span id="wordCount">0 words</span>
+                <span id="userEmail" class="user-email"></span>
+                <button id="logoutBtn" class="btn-logout" title="Log out">Log out</button>
             </div>
         </header>
 
@@ -332,7 +360,24 @@
             <div id="settings-tab" class="tab-content">
                 <div class="card">
                     <h2>⚙️ Settings</h2>
-                    
+
+                    <div class="settings-section">
+                        <h3>Account</h3>
+                        <div class="setting-item">
+                            <label>Email</label>
+                            <p id="accountEmail" style="color:#6b7280; margin:0.25rem 0 0.5rem;">—</p>
+                        </div>
+                        <div class="setting-item">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" placeholder="At least 6 characters" minlength="6" autocomplete="new-password">
+                        </div>
+                        <div class="setting-item">
+                            <label for="confirmPassword">Confirm New Password</label>
+                            <input type="password" id="confirmPassword" placeholder="Re-enter new password" minlength="6" autocomplete="new-password">
+                        </div>
+                        <button type="button" id="changePasswordBtn" class="btn btn-primary">🔑 Change Password</button>
+                    </div>
+
                     <div class="settings-section">
                         <h3>Study Preferences</h3>
                         <div class="setting-item">
@@ -423,6 +468,7 @@
         </main>
     </div>
 
-    <script src="script.js?v=4"></script>
+    <script src="supabase-config.js?v=3"></script>
+    <script src="script.js?v=7"></script>
 </body>
 </html>

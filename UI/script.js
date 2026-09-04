@@ -2,103 +2,76 @@
 // Quick Vocab Trainer - Main Application Script
 // =====================================================
 
-// Data Storage
+// Data Storage — backed by Supabase with an in-memory cache.
+// Reads are synchronous (from cache); writes update the cache immediately
+// and are pushed to Supabase in the background.
 class VocabStore {
     constructor() {
-        this.storageKey = 'vocab_app_data';
-        this.statsKey = 'vocab_app_stats';
         this.settingsKey = 'vocab_app_settings';
-        this.categoriesKey = 'vocab_app_categories';
-        this.init();
+        // In-memory caches
+        this._words = [];
+        this._stats = null;
+        this._categories = [];
+        this._ready = false;
     }
 
-    init() {
-        if (!this.getAll()) {
-            // Add some sample words for testing
-            const sampleWords = [
-                {
-                    id: '1',
-                    word: 'sophisticated',
-                    meaning: 'advanced and refined',
-                    example: 'She has sophisticated taste in art',
-                    source: '',
-                    mastery: 0,
-                    createdAt: new Date().toISOString(),
-                    attempts: 0,
-                    correct: 0
-                },
-                {
-                    id: '2',
-                    word: 'brilliant',
-                    meaning: 'extremely clever or talented',
-                    example: 'He is a brilliant scientist',
-                    source: '',
-                    mastery: 0,
-                    createdAt: new Date().toISOString(),
-                    attempts: 0,
-                    correct: 0
-                },
-                {
-                    id: '3',
-                    word: 'magnificent',
-                    meaning: 'extremely beautiful or impressive',
-                    example: 'The view from the mountain was magnificent',
-                    source: '',
-                    mastery: 0,
-                    createdAt: new Date().toISOString(),
-                    attempts: 0,
-                    correct: 0
-                },
-                {
-                    id: '4',
-                    word: 'extraordinary',
-                    meaning: 'very unusual or remarkable',
-                    example: 'She has extraordinary musical talent',
-                    source: '',
-                    mastery: 0,
-                    createdAt: new Date().toISOString(),
-                    attempts: 0,
-                    correct: 0
+    // Load everything from Supabase once, at startup. Must be awaited before use.
+    // RLS ensures only the logged-in user's rows come back.
+    async load() {
+        try {
+            const [words, stats, categories] = await Promise.all([
+                sb.select('words', '&order=created_at.asc'),
+                sb.select('stats'),
+                sb.select('categories', '&order=name.asc'),
+            ]);
+
+            // Map DB column created_at -> JS createdAt
+            this._words = words.map(w => ({
+                id: w.id,
+                word: w.word,
+                meaning: w.meaning,
+                example: w.example || '',
+                source: w.source || '',
+                category: w.category || '',
+                mastery: w.mastery || 0,
+                attempts: w.attempts || 0,
+                correct: w.correct || 0,
+                createdAt: w.created_at,
+            }));
+
+            const defaultStats = { totalSessions: 0, totalCorrect: 0, totalAnswered: 0, currentStreak: 0, longestStreak: 0, lastStudyDate: null, activityLog: [] };
+            if (stats && stats[0] && stats[0].data) {
+                this._stats = stats[0].data;
+                if (!this._stats.activityLog) this._stats.activityLog = [];
+            } else {
+                // First login for this user — create their stats row
+                this._stats = defaultStats;
+                const uid = auth.getUserId();
+                if (uid) {
+                    sb.upsert('stats', { user_id: uid, data: defaultStats }).catch(err => {
+                        console.error('Failed to create stats row:', err);
+                    });
                 }
-            ];
-            this.save(sampleWords);
-        }
-        if (!this.getStats()) {
-            this.saveStats({
-                totalSessions: 0,
-                totalCorrect: 0,
-                totalAnswered: 0,
-                currentStreak: 0,
-                longestStreak: 0,
-                lastStudyDate: null,
-                activityLog: [],
-            });
-        } else {
-            // Migrate: ensure activityLog exists in existing stats
-            const stats = this.getStats();
-            if (!stats.activityLog) {
-                stats.activityLog = [];
-                this.saveStats(stats);
             }
-        }
-        if (!this.getSettings()) {
-            this.saveSettings({
-                quizSize: 10,
-                aiEnabled: true,
-                theme: 'auto',
-                fontSize: 'normal',
-            });
+
+            this._categories = categories.map(c => c.name);
+            this._ready = true;
+        } catch (err) {
+            console.error('Failed to load from Supabase:', err);
+            showNotification('Could not connect to database. Check your internet.', 'error');
+            // Fallback empties so the app still renders
+            this._stats = { totalSessions: 0, totalCorrect: 0, totalAnswered: 0, currentStreak: 0, longestStreak: 0, lastStudyDate: null, activityLog: [] };
+            throw err;
         }
     }
 
+    // ---- Synchronous reads (from cache) ----
     getAll() {
-        const data = localStorage.getItem(this.storageKey);
-        return data ? JSON.parse(data) : null;
+        return this._words;
     }
 
     getStats() {
-        const stats = localStorage.getItem(this.statsKey);
-        return stats ? JSON.parse(stats) : null;
+        return this._stats;
     }
 
     getSettings() {
@@ -106,21 +79,29 @@ class VocabStore {
         return settings ? JSON.parse(settings) : null;
     }
 
+    // ---- Writes: update cache + push to Supabase in background ----
     save(words) {
-        localStorage.setItem(this.storageKey, JSON.stringify(words));
+        // Kept for compatibility (import/clear). Replaces the whole cache.
+        this._words = words;
         this.updateWordCount();
     }
 
     saveStats(stats) {
-        localStorage.setItem(this.statsKey, JSON.stringify(stats));
+        this._stats = stats;
+        const uid = auth.getUserId();
+        if (!uid) return;
+        // Upsert this user's stats row (primary key is user_id)
+        sb.upsert('stats', { user_id: uid, data: stats }).catch(err => {
+            console.error('Failed to save stats:', err);
+        });
     }
 
     saveSettings(settings) {
+        // Settings are device-specific — keep in localStorage
         localStorage.setItem(this.settingsKey, JSON.stringify(settings));
     }
 
     addWord(word, meaning, example = '', source = '', category = '') {
-        const words = this.getAll();
         const newWord = {
             id: Date.now().toString(),
             word: word.trim(),
@@ -133,24 +114,55 @@ class VocabStore {
             attempts: 0,
             correct: 0,
         };
-        words.push(newWord);
-        this.save(words);
+        // Update cache immediately
+        this._words.push(newWord);
+        this.updateWordCount();
         this.logActivity('wordsAdded', 1);
+
+        // Push to Supabase (map createdAt -> created_at, attach owner)
+        sb.insert('words', {
+            id: newWord.id,
+            word: newWord.word,
+            meaning: newWord.meaning,
+            example: newWord.example,
+            source: newWord.source,
+            category: newWord.category,
+            mastery: 0,
+            attempts: 0,
+            correct: 0,
+            created_at: newWord.createdAt,
+            user_id: auth.getUserId(),
+        }).catch(err => {
+            console.error('Failed to save word:', err);
+            showNotification('Word saved locally but failed to sync to cloud', 'warning');
+        });
+
         return newWord;
     }
 
     deleteWord(id) {
-        const words = this.getAll();
-        const filtered = words.filter(w => w.id !== id);
-        this.save(filtered);
+        this._words = this._words.filter(w => w.id !== id);
+        this.updateWordCount();
+        sb.remove('words', { id }).catch(err => {
+            console.error('Failed to delete word:', err);
+            showNotification('Failed to delete from cloud', 'warning');
+        });
     }
 
     updateWord(id, updates) {
-        const words = this.getAll();
-        const word = words.find(w => w.id === id);
+        const word = this._words.find(w => w.id === id);
         if (word) {
             Object.assign(word, updates);
-            this.save(words);
+            // Only send DB columns (drop createdAt naming mismatch — we don't update it)
+            const dbUpdates = {};
+            for (const key of ['word', 'meaning', 'example', 'source', 'category', 'mastery', 'attempts', 'correct']) {
+                if (key in updates) dbUpdates[key] = updates[key];
+            }
+            if (Object.keys(dbUpdates).length > 0) {
+                sb.update('words', { id }, dbUpdates).catch(err => {
+                    console.error('Failed to update word:', err);
+                });
+            }
         }
     }
 
@@ -204,29 +216,27 @@ class VocabStore {
 
     // Category management
     getCategories() {
-        const data = localStorage.getItem(this.categoriesKey);
-        return data ? JSON.parse(data) : ['General', 'Academic', 'Business', 'Daily Life'];
-    }
-
-    saveCategories(categories) {
-        localStorage.setItem(this.categoriesKey, JSON.stringify(categories));
+        return this._categories;
     }
 
     addCategory(name) {
-        const categories = this.getCategories();
         const trimmed = name.trim();
-        if (trimmed && !categories.includes(trimmed)) {
-            categories.push(trimmed);
-            this.saveCategories(categories);
+        if (trimmed && !this._categories.includes(trimmed)) {
+            this._categories.push(trimmed);
+            sb.insert('categories', { name: trimmed, user_id: auth.getUserId() }).catch(err => {
+                console.error('Failed to add category:', err);
+                showNotification('Failed to sync category to cloud', 'warning');
+            });
             return true;
         }
         return false;
     }
 
     deleteCategory(name) {
-        const categories = this.getCategories();
-        const filtered = categories.filter(c => c !== name);
-        this.saveCategories(filtered);
+        this._categories = this._categories.filter(c => c !== name);
+        sb.remove('categories', { name }).catch(err => {
+            console.error('Failed to delete category:', err);
+        });
     }
 }
 
@@ -1286,6 +1296,42 @@ function initSettings() {
     document.getElementById('theme').value = settings.theme;
     document.getElementById('fontSize').value = settings.fontSize;
 
+    // Account section — show email + wire change password
+    const accountEmailEl = document.getElementById('accountEmail');
+    if (accountEmailEl) accountEmailEl.textContent = auth.getEmail() || '—';
+
+    const changePwBtn = document.getElementById('changePasswordBtn');
+    if (changePwBtn) {
+        changePwBtn.addEventListener('click', async () => {
+            const newPw = document.getElementById('newPassword').value;
+            const confirmPw = document.getElementById('confirmPassword').value;
+
+            if (!newPw || newPw.length < 6) {
+                showNotification('Password must be at least 6 characters', 'error');
+                return;
+            }
+            if (newPw !== confirmPw) {
+                showNotification('Passwords do not match', 'error');
+                return;
+            }
+
+            const original = changePwBtn.textContent;
+            changePwBtn.disabled = true;
+            changePwBtn.textContent = 'Updating...';
+            try {
+                await auth.updatePassword(newPw);
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+                showNotification('Password changed successfully! ✓', 'success');
+            } catch (err) {
+                showNotification(err.message || 'Failed to change password', 'error');
+            } finally {
+                changePwBtn.disabled = false;
+                changePwBtn.textContent = original;
+            }
+        });
+    }
+
     // Event listeners
     exportBtn.addEventListener('click', exportData);
     importBtn.addEventListener('click', () => importFile.click());
@@ -1384,15 +1430,37 @@ function handleImport(e) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
         try {
             const data = JSON.parse(event.target.result);
-            store.save(data.words);
-            if (data.stats) {
-                store.saveStats(data.stats);
+            if (!Array.isArray(data.words)) throw new Error('Invalid file format');
+
+            showNotification('Importing to cloud...', 'info');
+            const uid = auth.getUserId();
+            // Upsert each word into Supabase (attach owner)
+            for (const w of data.words) {
+                await sb.upsert('words', {
+                    id: w.id || Date.now().toString() + Math.random().toString(36).slice(2),
+                    word: w.word,
+                    meaning: w.meaning,
+                    example: w.example || '',
+                    source: w.source || '',
+                    category: w.category || '',
+                    mastery: w.mastery || 0,
+                    attempts: w.attempts || 0,
+                    correct: w.correct || 0,
+                    created_at: w.createdAt || new Date().toISOString(),
+                    user_id: uid,
+                });
             }
-            showNotification('Data imported successfully!', 'success');
+            if (data.stats) {
+                await sb.upsert('stats', { user_id: uid, data: data.stats });
+            }
+            // Reload cache from cloud
+            await store.load();
             displayWords('');
+            store.updateWordCount();
+            showNotification('Data imported successfully!', 'success');
         } catch (err) {
             alert('Error importing file: ' + err.message);
         }
@@ -1414,12 +1482,25 @@ function resetProgress() {
     }
 }
 
-function clearAllData() {
+async function clearAllData() {
     if (confirm('WARNING: This will delete ALL data permanently. Are you sure?')) {
         if (confirm('This cannot be undone. Are you really sure?')) {
-            store.save([]);
-            store.init();
-            location.reload();
+            try {
+                showNotification('Deleting all data...', 'info');
+                // Delete every word from Supabase
+                const words = store.getAll().slice();
+                for (const w of words) {
+                    await sb.remove('words', { id: w.id });
+                }
+                // Reset stats for this user
+                await sb.upsert('stats', {
+                    user_id: auth.getUserId(),
+                    data: { totalSessions: 0, totalCorrect: 0, totalAnswered: 0, currentStreak: 0, longestStreak: 0, lastStudyDate: null, activityLog: [] }
+                });
+                location.reload();
+            } catch (err) {
+                showNotification('Failed to clear cloud data: ' + err.message, 'error');
+            }
         }
     }
 }
@@ -1461,17 +1542,136 @@ function showNotification(message, type = 'info') {
 // =====================================================
 // Initialization
 // =====================================================
-document.addEventListener('DOMContentLoaded', () => {
-    initTabNavigation();
-    initAddWordForm();
-    initWordList();
-    initQuiz();
-    initWritingPractice();
-    initSettings();
-    populateCategoryDropdowns();
+// =====================================================
+// Auth screen wiring
+// =====================================================
+let appInitialized = false;
+let authMode = 'login'; // 'login' | 'signup'
 
-    // Initial display
+function showAuthScreen() {
+    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('appContainer').style.display = 'none';
+}
+
+function showApp() {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appContainer').style.display = '';
+    document.getElementById('userEmail').textContent = auth.getEmail() || '';
+}
+
+function setAuthError(msg) {
+    const el = document.getElementById('authError');
+    if (msg) {
+        el.textContent = msg;
+        el.style.display = 'block';
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+function toggleAuthMode() {
+    authMode = authMode === 'login' ? 'signup' : 'login';
+    const isLogin = authMode === 'login';
+    document.getElementById('authSubtitle').textContent = isLogin ? 'Log in to access your vocabulary' : 'Create an account to get started';
+    document.getElementById('authSubmitBtn').textContent = isLogin ? 'Log In' : 'Sign Up';
+    document.getElementById('authToggleText').textContent = isLogin ? "Don't have an account?" : 'Already have an account?';
+    document.getElementById('authToggleLink').textContent = isLogin ? 'Sign up' : 'Log in';
+    document.getElementById('authPassword').setAttribute('autocomplete', isLogin ? 'current-password' : 'new-password');
+    setAuthError('');
+}
+
+function initAuthScreen() {
+    const form = document.getElementById('authForm');
+    const toggleLink = document.getElementById('authToggleLink');
+    const submitBtn = document.getElementById('authSubmitBtn');
+
+    toggleLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleAuthMode();
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setAuthError('');
+        const email = document.getElementById('authEmail').value.trim();
+        const password = document.getElementById('authPassword').value;
+        const originalLabel = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Please wait...';
+
+        try {
+            if (authMode === 'signup') {
+                const result = await auth.signUp(email, password);
+                if (!result.session) {
+                    // Email confirmation required
+                    setAuthError('Check your email to confirm your account, then log in.');
+                    toggleAuthMode(); // switch to login mode
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Log In';
+                    return;
+                }
+            } else {
+                await auth.signIn(email, password);
+            }
+            // Logged in — start the app
+            await startApp();
+        } catch (err) {
+            setAuthError(err.message || 'Authentication failed');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalLabel;
+        }
+    });
+
+    // Logout button (in header)
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await auth.signOut();
+        location.reload();
+    });
+}
+
+// Load data + initialize the whole app (only once)
+async function startApp() {
+    showApp();
+
+    // Ensure device settings exist
+    if (!store.getSettings()) {
+        store.saveSettings({ quizSize: 10, aiEnabled: true, theme: 'auto', fontSize: 'normal' });
+    }
+
+    // Load this user's data from Supabase
+    try {
+        await store.load();
+    } catch (err) {
+        // load() already notified the user; continue so UI still renders
+    }
+
+    if (!appInitialized) {
+        initTabNavigation();
+        initAddWordForm();
+        initWordList();
+        initQuiz();
+        initWritingPractice();
+        initSettings();
+        appInitialized = true;
+    }
+    populateCategoryDropdowns();
     store.updateWordCount();
+    displayWords('');
+}
+
+// =====================================================
+// Initialization
+// =====================================================
+document.addEventListener('DOMContentLoaded', async () => {
+    initAuthScreen();
+
+    // Restore a saved session if present
+    auth.loadSession();
+    if (auth.isLoggedIn()) {
+        await startApp();
+    } else {
+        showAuthScreen();
+    }
 });
 
 // Animation keyframes
